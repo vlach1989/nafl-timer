@@ -751,6 +751,64 @@
     animation: flashPulse 1.15s ease-in-out 1;
   }
 
+  @media (max-width: 640px) {
+    .board {
+      gap: clamp(6px, 1.6vmin, 14px);
+      padding: clamp(8px, 2vmin, 18px);
+    }
+
+    .scoreboard {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas:
+        "home away"
+        "center center";
+      gap: clamp(6px, 1.6vmin, 12px);
+    }
+
+    .scoreboard > .team.home {
+      grid-area: home;
+    }
+
+    .board.swapped .scoreboard > .team.home {
+      grid-area: away;
+    }
+
+    .scoreboard > .team.away {
+      grid-area: away;
+    }
+
+    .board.swapped .scoreboard > .team.away {
+      grid-area: home;
+    }
+
+    .scoreboard > .center {
+      grid-area: center;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(6px, 1.4vmin, 12px);
+      padding: clamp(6px, 1.2vmin, 12px) clamp(8px, 1.4vmin, 16px);
+    }
+
+    .controls-side,
+    .controls-side.right {
+      align-items: center;
+    }
+
+    .controls-group,
+    .controls-side.right .controls-group {
+      justify-content: center;
+    }
+
+    .toggle {
+      order: -1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .btn,
     .step,
