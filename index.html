@@ -66,6 +66,7 @@
   }
 
   .board {
+    --font-scale: 1;
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
     gap: clamp(8px, 1.2vmin, 18px);
@@ -75,11 +76,42 @@
     overflow: hidden;
   }
 
+  .board.size-m {
+    --font-scale: .85;
+  }
+
+  .board.size-xl {
+    --font-scale: 1.15;
+  }
+
   .scoreboard {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.75fr) minmax(0, 1fr);
     gap: clamp(8px, 1.4vmin, 20px);
     min-height: 0;
+  }
+
+  .scoreboard > .team.home {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .scoreboard > .center {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .scoreboard > .team.away {
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .board.swapped .scoreboard > .team.home {
+    grid-column: 3;
+  }
+
+  .board.swapped .scoreboard > .team.away {
+    grid-column: 1;
   }
 
   .panel {
@@ -175,7 +207,7 @@
     background: transparent;
     color: var(--ink);
     font-family: var(--font);
-    font-size: clamp(1.4rem, 6vmin, 5rem);
+    font-size: clamp(calc(1.4rem * var(--font-scale)), calc(6vmin * var(--font-scale)), calc(5rem * var(--font-scale)));
     font-weight: 700;
     line-height: 1.1;
     text-align: center;
@@ -215,7 +247,7 @@
     background: transparent;
     color: inherit;
     font-family: var(--font);
-    font-size: clamp(4.5rem, 26vmin, 30rem);
+    font-size: clamp(calc(4.5rem * var(--font-scale)), calc(26vmin * var(--font-scale)), calc(30rem * var(--font-scale)));
     font-weight: 800;
     line-height: .85;
     font-variant-numeric: tabular-nums lining-nums;
@@ -225,7 +257,7 @@
   }
 
   .score.is-three {
-    font-size: clamp(3.5rem, 21.5vmin, 24rem);
+    font-size: clamp(calc(3.5rem * var(--font-scale)), calc(21.5vmin * var(--font-scale)), calc(24rem * var(--font-scale)));
   }
 
   .score:hover {
@@ -241,7 +273,7 @@
     background: var(--team-soft);
     color: inherit;
     font-family: var(--font);
-    font-size: clamp(4.5rem, 26vmin, 30rem);
+    font-size: clamp(calc(4.5rem * var(--font-scale)), calc(26vmin * var(--font-scale)), calc(30rem * var(--font-scale)));
     font-weight: 800;
     line-height: .85;
     font-variant-numeric: tabular-nums lining-nums;
@@ -251,7 +283,7 @@
 
   .score-input.is-three {
     width: 1.9em;
-    font-size: clamp(3.5rem, 21.5vmin, 24rem);
+    font-size: clamp(calc(3.5rem * var(--font-scale)), calc(21.5vmin * var(--font-scale)), calc(24rem * var(--font-scale)));
   }
 
   .score-input:focus {
@@ -340,7 +372,7 @@
   .clock {
     color: var(--ink);
     font-family: var(--font);
-    font-size: clamp(4.5rem, 32vmin, 26rem);
+    font-size: clamp(calc(4.5rem * var(--font-scale)), calc(32vmin * var(--font-scale)), calc(26rem * var(--font-scale)));
     font-weight: 800;
     line-height: .9;
     font-variant-numeric: tabular-nums lining-nums;
@@ -411,7 +443,7 @@
     background: transparent;
     color: var(--muted);
     font-family: var(--font);
-    font-size: clamp(1.25rem, 4.2vmin, 3.4rem);
+    font-size: clamp(calc(1.25rem * var(--font-scale)), calc(4.2vmin * var(--font-scale)), calc(3.4rem * var(--font-scale)));
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: .08em;
@@ -453,7 +485,7 @@
     background: var(--home-soft);
     color: var(--ink);
     font-family: var(--font);
-    font-size: clamp(1.25rem, 4.2vmin, 3.4rem);
+    font-size: clamp(calc(1.25rem * var(--font-scale)), calc(4.2vmin * var(--font-scale)), calc(3.4rem * var(--font-scale)));
     font-weight: 700;
     line-height: 1.15;
     font-variant-numeric: tabular-nums lining-nums;
@@ -632,10 +664,28 @@
     color: var(--danger);
   }
 
-  #namesBtn[aria-pressed="true"] {
+  #namesBtn[aria-pressed="true"],
+  #swapBtn[aria-pressed="true"] {
     border-color: var(--line);
     background: var(--bg);
     color: var(--ink);
+  }
+
+  .size-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .size-btn {
+    min-width: clamp(1.9rem, 3.4vmin, 2.6rem);
+    padding-inline: .45em;
+  }
+
+  .size-group .size-btn[aria-pressed="true"] {
+    border-color: var(--home);
+    background: var(--home-soft);
+    color: var(--home);
   }
 
   .config {
@@ -712,7 +762,7 @@
 </style>
 </head>
 <body>
-<main class="board">
+<main class="board" id="board">
   <div class="scoreboard">
     <section class="panel team home" aria-label="Home team">
       <div class="team-bar">
@@ -784,6 +834,16 @@
             <path class="sound-off" d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
           </svg>
         </button>
+        <div class="size-group" role="group" aria-label="Scoreboard font size">
+          <button class="btn size-btn" type="button" data-size="m" aria-pressed="false">M</button>
+          <button class="btn size-btn" type="button" data-size="l" aria-pressed="true">L</button>
+          <button class="btn size-btn" type="button" data-size="xl" aria-pressed="false">XL</button>
+        </div>
+        <button class="btn icon-btn" id="swapBtn" type="button" aria-pressed="false" aria-label="Swap home and away sides" title="Swap home and away sides">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </button>
       </div>
     </div>
     <button class="btn toggle" id="toggleBtn" type="button" aria-label="Start clock">
@@ -815,10 +875,12 @@
   const FLASH_MS = 1200;
   const DEFAULT_HOME_COLOR = '#0f6fd1';
   const DEFAULT_AWAY_COLOR = '#d4550a';
+  const FONT_SIZES = ['m', 'l', 'xl'];
 
   const byId = (id) => document.getElementById(id);
 
   const els = {
+    board: byId('board'),
     homeName: byId('homeName'),
     awayName: byId('awayName'),
     homeScore: byId('homeScore'),
@@ -840,8 +902,11 @@
     lengthInput: byId('lengthInput'),
     muteBtn: byId('muteBtn'),
     namesBtn: byId('namesBtn'),
+    swapBtn: byId('swapBtn'),
     newBtn: byId('newBtn')
   };
+
+  const sizeButtons = Array.from(document.querySelectorAll('.size-btn'));
 
   const teams = {
     home: {
@@ -873,7 +938,9 @@
     periods: 2,
     periodLengthMs: 600000,
     muted: false,
-    namesHidden: false
+    namesHidden: false,
+    size: 'l',
+    swapped: false
   });
 
   let state = defaultState();
@@ -956,7 +1023,9 @@
       periods,
       periodLengthMs,
       muted: raw.muted === true,
-      namesHidden: raw.namesHidden === true
+      namesHidden: raw.namesHidden === true,
+      size: FONT_SIZES.includes(raw.size) ? raw.size : 'l',
+      swapped: raw.swapped === true
     };
   }
 
@@ -1060,6 +1129,17 @@
     els.namesBtn.setAttribute('aria-pressed', state.namesHidden ? 'true' : 'false');
     els.namesBtn.setAttribute('aria-label', namesLabel);
     els.namesBtn.title = namesLabel;
+    FONT_SIZES.forEach((size) => {
+      els.board.classList.toggle('size-' + size, state.size === size);
+    });
+    sizeButtons.forEach((button) => {
+      button.setAttribute(
+        'aria-pressed',
+        button.dataset.size === state.size ? 'true' : 'false'
+      );
+    });
+    els.board.classList.toggle('swapped', state.swapped);
+    els.swapBtn.setAttribute('aria-pressed', state.swapped ? 'true' : 'false');
   }
 
   function stopTicking() {
@@ -1323,6 +1403,20 @@
     resizeNames();
   }
 
+  function setSize(size) {
+    if (!FONT_SIZES.includes(size)) return;
+    state.size = size;
+    persist();
+    render();
+    resizeNames();
+  }
+
+  function toggleSwap() {
+    state.swapped = !state.swapped;
+    persist();
+    render();
+  }
+
   function newGame() {
     const confirmed = window.confirm('Start a new game? Current score and clock will be lost.');
     if (!confirmed) {
@@ -1405,6 +1499,10 @@
   els.timePlus.addEventListener('click', () => adjustTime(1));
   els.muteBtn.addEventListener('click', toggleMute);
   els.namesBtn.addEventListener('click', toggleNames);
+  sizeButtons.forEach((button) => {
+    button.addEventListener('click', () => setSize(button.dataset.size));
+  });
+  els.swapBtn.addEventListener('click', toggleSwap);
   els.newBtn.addEventListener('click', newGame);
 
   document.querySelectorAll('.step').forEach((button) => {
