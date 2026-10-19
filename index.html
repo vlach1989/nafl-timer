@@ -297,16 +297,37 @@
     transition: background-color .12s, border-color .12s, transform .06s;
   }
 
-  .step:hover {
+  .step:hover:not(:disabled) {
     border-color: var(--team);
     background: var(--team-soft);
   }
 
-  .step:active {
+  .step:active:not(:disabled) {
     transform: scale(.94);
   }
 
+  .step:disabled {
+    opacity: .35;
+    cursor: default;
+  }
+
+  .clock-step,
+  .period-step {
+    width: clamp(1.7rem, 3.4vmin, 2.6rem);
+    height: clamp(1.7rem, 3.4vmin, 2.6rem);
+    color: var(--muted);
+    font-size: clamp(.9rem, 1.8vmin, 1.4rem);
+  }
+
+  .clock-step:hover:not(:disabled),
+  .period-step:hover:not(:disabled) {
+    border-color: var(--muted);
+    background: var(--panel-2);
+    color: var(--ink);
+  }
+
   .center {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -333,10 +354,20 @@
     transform: scaleX(.85);
   }
 
+  .clock.is-editable {
+    cursor: pointer;
+  }
+
   .clock-edit {
+    position: absolute;
+    top: clamp(2px, .4vmin, 20px);
+    right: 0;
+    left: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+    gap: clamp(6px, 1.2vmin, 12px);
     min-height: clamp(1.5rem, 3.2vmin, 2.4rem);
   }
 
@@ -406,8 +437,10 @@
 
   .period-edit {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+    gap: clamp(6px, 1.2vmin, 12px);
     min-height: clamp(2rem, 5vmin, 4.2rem);
   }
 
@@ -702,15 +735,19 @@
     </section>
 
     <section class="panel center" aria-label="Clock">
-      <div class="clock" id="clock" data-flash role="timer" aria-live="off" aria-label="Elapsed time">0:00</div>
       <div class="clock-edit">
+        <button class="step clock-step" id="timeMinus" type="button" aria-label="Decrease time by one second">&minus;</button>
         <label class="sr-only" for="clockInput">Set elapsed time in minutes and seconds</label>
         <input class="clock-input" id="clockInput" type="text" inputmode="numeric" placeholder="Set time" autocomplete="off" spellcheck="false">
+        <button class="step clock-step" id="timePlus" type="button" aria-label="Increase time by one second">+</button>
       </div>
+      <div class="clock" id="clock" data-flash role="timer" aria-live="off" aria-label="Elapsed time">0:00</div>
       <div class="period-edit">
+        <button class="step period-step" id="periodMinus" type="button" aria-label="Previous period">&minus;</button>
         <label class="sr-only" for="periodInput">Set current period and total periods, e.g. 2 or 2 / 3</label>
         <button class="period" id="periodLabel" type="button">Period 1 / 2</button>
         <input class="period-input" id="periodInput" type="text" inputmode="numeric" maxlength="9" autocomplete="off" spellcheck="false" hidden>
+        <button class="step period-step" id="periodPlus" type="button" aria-label="Next period">+</button>
       </div>
     </section>
 
@@ -790,8 +827,12 @@
     awayScoreInput: byId('awayScoreInput'),
     clock: byId('clock'),
     clockInput: byId('clockInput'),
+    timeMinus: byId('timeMinus'),
+    timePlus: byId('timePlus'),
     periodLabel: byId('periodLabel'),
     periodInput: byId('periodInput'),
+    periodMinus: byId('periodMinus'),
+    periodPlus: byId('periodPlus'),
     toggleBtn: byId('toggleBtn'),
     toggleLabel: byId('toggleLabel'),
     homeColor: byId('homeColor'),
@@ -972,12 +1013,22 @@
     const clockText = formatClock(state.elapsedMs);
     els.clock.textContent = clockText;
     els.clock.classList.toggle('is-wide', clockText.length > 4);
+    els.clock.classList.toggle('is-editable', !running);
+    els.clock.title = running ? '' : 'Click to edit time';
     els.clockInput.hidden = running;
+    els.timeMinus.hidden = running;
+    els.timePlus.hidden = running;
+    els.timeMinus.disabled = state.elapsedMs <= 0;
+    els.timePlus.disabled = state.elapsedMs >= state.periodLengthMs;
     if (!running && document.activeElement !== els.clockInput) {
       els.clockInput.value = '';
     }
     els.periodLabel.hidden = editingPeriod;
     els.periodInput.hidden = !editingPeriod;
+    els.periodMinus.hidden = running || editingPeriod;
+    els.periodPlus.hidden = running || editingPeriod;
+    els.periodMinus.disabled = running || state.period <= 1;
+    els.periodPlus.disabled = running || state.period >= state.periods;
     els.periodLabel.textContent = 'Period ' + state.period + ' / ' + state.periods;
     els.periodLabel.disabled = running;
     els.periodLabel.title = running
@@ -996,6 +1047,7 @@
     els.toggleBtn.classList.toggle('is-running', running);
     els.toggleBtn.disabled = !running && atLimit;
     els.toggleBtn.setAttribute('aria-label', running ? 'Pause clock' : 'Start clock');
+    els.newBtn.disabled = running;
     if (document.activeElement !== els.lengthInput) {
       els.lengthInput.value = formatClock(state.periodLengthMs);
     }
@@ -1070,12 +1122,15 @@
     playBeep();
   }
 
+  function confirmPeriodChange(period) {
+    return window.confirm(
+      'Move to period ' + period + '? The clock will reset to 0:00.'
+    );
+  }
+
   function nextPeriod() {
     if (state.period >= state.periods) return;
-    const confirmed = window.confirm(
-      'Advance to period ' + (state.period + 1) + '? The clock will reset to 0:00.'
-    );
-    if (!confirmed) {
+    if (!confirmPeriodChange(state.period + 1)) {
       render();
       return;
     }
@@ -1085,6 +1140,28 @@
     }
     state.period += 1;
     state.elapsedMs = 0;
+    persist();
+    render();
+  }
+
+  function adjustPeriod(delta) {
+    if (running) return;
+    const period = clamp(state.period + delta, 1, state.periods);
+    if (period === state.period) return;
+    if (!confirmPeriodChange(period)) {
+      render();
+      return;
+    }
+    state.period = period;
+    state.elapsedMs = 0;
+    persist();
+    render();
+  }
+
+  function adjustTime(deltaSeconds) {
+    if (running) return;
+    const seconds = Math.round(state.elapsedMs / 1000) + deltaSeconds;
+    state.elapsedMs = clamp(seconds * 1000, 0, state.periodLengthMs);
     persist();
     render();
   }
@@ -1175,6 +1252,10 @@
         : Number(match[2]);
       if (period >= 1 && periods >= 1 && period <= periods && periods <= 9) {
         if (period !== state.period) {
+          if (!confirmPeriodChange(period)) {
+            render();
+            return;
+          }
           if (running) stopTicking();
           state.elapsedMs = 0;
         }
@@ -1318,6 +1399,10 @@
 
   els.toggleBtn.addEventListener('click', toggleClock);
   els.periodLabel.addEventListener('click', beginPeriodEdit);
+  els.periodMinus.addEventListener('click', () => adjustPeriod(-1));
+  els.periodPlus.addEventListener('click', () => adjustPeriod(1));
+  els.timeMinus.addEventListener('click', () => adjustTime(-1));
+  els.timePlus.addEventListener('click', () => adjustTime(1));
   els.muteBtn.addEventListener('click', toggleMute);
   els.namesBtn.addEventListener('click', toggleNames);
   els.newBtn.addEventListener('click', newGame);
@@ -1349,6 +1434,12 @@
     ui.colorInput.addEventListener('input', applyColor);
     ui.colorInput.addEventListener('change', applyColor);
     wireName(teamKey);
+  });
+
+  els.clock.addEventListener('click', () => {
+    if (running) return;
+    els.clockInput.focus();
+    els.clockInput.select();
   });
 
   els.clockInput.addEventListener('focus', () => {
